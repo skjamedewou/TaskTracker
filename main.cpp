@@ -1,5 +1,9 @@
 #include <iostream>
 #include <unordered_map>
+#include <fstream>
+#include <filesystem>
+#include <ctime>
+#include <string>
 
 enum class Command {
 	ADD,
@@ -16,14 +20,14 @@ enum class Command {
 
 std::unordered_map<std::string, Command> command_map = {
 	{"add", Command::ADD},
-	{"update", Command::ADD},
-	{"delete", Command::ADD},
-	{"mark-in-progress", Command::ADD},
-	{"mark-done", Command::ADD},
-	{"list", Command::ADD},
-	{"list done", Command::ADD},
-	{"list todo", Command::ADD},
-	{"list in-progress", Command::ADD}
+	{"update", Command::UPDATE},
+	{"delete", Command::DELETE},
+	{"mark-in-progress", Command::MARK_IN_PROGRESS},
+	{"mark-done", Command::MARK_DONE},
+	{"list", Command::LIST},
+	{"list done", Command::LIST_DONE},
+	{"list todo", Command::LIST_TODO},
+	{"list in-progress", Command::LIST_IN_PROGRESS}
 
 };
 
@@ -34,6 +38,11 @@ struct Task {
 	std::string createdAt;
 	std::string updatedAt;
 };
+
+const std::string filename = "tasks.json";
+
+int add(std::string desc);
+int max_Id(std::string file);
 
 int main(int argc, char* argv[]) 
 {
@@ -62,7 +71,15 @@ int main(int argc, char* argv[])
 	switch (cmd)
 	{
 	case Command::ADD:
+	{
+		if (argc < 3) {
+			std::cerr << "Erreur : description manquante pour 'add'\n";
+			return 1;
+		}
+		std::string description = argv[2];
+		int ret = add(description);
 		break;
+	}
 	case Command::UPDATE:
 		break;
 	case Command::DELETE:
@@ -87,3 +104,71 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
+int add(std::string desc)
+{
+	// Vérifie si le fichier existe
+	if (!std::filesystem::exists(filename)) {
+		std::ofstream outfile(filename);
+		if (!outfile) {
+			std::cerr << "Erreur : impossible de créer le fichier " << filename << "\n";
+			return 1;
+		}
+		//outfile << "[]";
+		outfile.close();
+		std::cout << "Fichier créé : " << filename << "\n";
+	}
+
+	// Lecture du contenu
+	std::ifstream infile(filename);
+	if (!infile) {
+		std::cerr << "Erreur : impossible d'ouvrir le fichier " << filename << "\n";
+		return 1;
+	}
+
+	std::string content((std::istreambuf_iterator<char>(infile)), std::istreambuf_iterator<char>());
+	infile.close();
+
+	std::cout << "Contenu actuel de tasks.json :\n" << content << "\n";
+
+	// Ecriture de la tache
+	Task T ;
+	T.id = max_Id(filename) + 1;
+	T.description = desc;
+	std::time_t current_time = std::time(nullptr);
+	std::string now = std::ctime(&current_time);
+	now.pop_back();
+	T.createdAt = now;
+	T.updatedAt = now;
+
+	std::ofstream outfile(filename, std::ios::app); // en mode append pour ne pas effacer tout le contenu du fichier
+	outfile << T.id << "|" << T.description << "|" << T.createdAt << "|" << T.updatedAt << "\n";
+	outfile.close();
+
+	return 0;
+}
+
+int max_Id(std::string file)
+{
+	std::ifstream infile(file);
+	if (!infile) return 0;
+
+	int maxId = 0;
+	std::string line;
+	while (std::getline(infile, line))
+	{
+		size_t sep = line.find('|');
+		if (sep != std::string::npos) {
+			std::string id_str = line.substr(0, sep);
+			try
+			{
+				int id = std::stoi(id_str);
+				if (id > maxId) maxId = id;
+			}
+			catch (const std::exception&)
+			{
+					
+			}
+		}
+	}
+	return maxId;
+}
