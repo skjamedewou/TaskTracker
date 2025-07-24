@@ -42,7 +42,8 @@ struct Task {
 const std::string filename = "tasks.json";
 
 int add(std::string desc);
-int max_Id(std::string file);
+int max_Id();
+void list();
 
 int main(int argc, char* argv[]) 
 {
@@ -81,7 +82,10 @@ int main(int argc, char* argv[])
 		break;
 	}
 	case Command::UPDATE:
+	{
+
 		break;
+	}
 	case Command::DELETE:
 		break;
 	case Command::MARK_IN_PROGRESS:
@@ -89,6 +93,7 @@ int main(int argc, char* argv[])
 	case Command::MARK_DONE:
 		break;
 	case Command::LIST:
+		list();
 		break;
 	case Command::LIST_DONE:
 		break;
@@ -132,7 +137,7 @@ int add(std::string desc)
 
 	// Ecriture de la tache
 	Task T ;
-	T.id = max_Id(filename) + 1;
+	T.id = max_Id() + 1;
 	T.description = desc;
 	std::time_t current_time = std::time(nullptr);
 	std::string now = std::ctime(&current_time);
@@ -147,9 +152,9 @@ int add(std::string desc)
 	return 0;
 }
 
-int max_Id(std::string file)
+int max_Id()
 {
-	std::ifstream infile(file);
+	std::ifstream infile(filename);
 	if (!infile) return 0;
 
 	int maxId = 0;
@@ -171,4 +176,21 @@ int max_Id(std::string file)
 		}
 	}
 	return maxId;
+}
+
+void list() {
+	std::ifstream infile(filename);
+	std::string line;
+	while (std::getline(infile, line))
+	{
+		size_t first_sep = line.find("|");
+		//int id = std::stoi(line.substr(0, first_sep));
+		size_t second_sep = line.find("|", first_sep + 1);
+		//std::string description = line.substr(first_sep + 1, second_sep - first_sep - 1);
+		std::string desc = line.substr(0, second_sep);
+
+		std::cout << desc << "\n";
+		//std::cout << id << "---" << description << "\n";
+	}
+	infile.close();
 }
