@@ -45,6 +45,3 @@ https://roadmap.sh/projects/task-tracker
 - ./task-cli help
 
 # All tasks are stored in a file named tasks.json located in the current directory.
-
-# View Other solutions 
-https://roadmap.sh/projects/task-tracker/solutions?u=687de7add8402b4cbdac7226
