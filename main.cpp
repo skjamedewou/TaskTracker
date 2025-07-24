@@ -87,6 +87,7 @@ int main(int argc, char* argv[])
 		std::string description = argv[2];
 		std::cout << " Adding Task..............\n";
 		ret = add(description);
+		std::cout << " Task added ..............\n";
 		break;
 	}
 	case Command::UPDATE:
@@ -99,6 +100,7 @@ int main(int argc, char* argv[])
 		std::string description = argv[3];
 		std::cout << "Updating Task " + std::to_string(id) + "..............\n";
 		ret = update_or_mark_or_delete(id, description, "");
+		std::cout << " Task updated ..............\n";
 		break;
 	}
 	case Command::DELETE:
@@ -109,6 +111,7 @@ int main(int argc, char* argv[])
 		id = std::stoi(argv[2]);
 		std::cout << "Deleting Task " + std::to_string(id) + "..............\n";
 		ret = update_or_mark_or_delete(id,"","");
+		std::cout << " Task deleted ..............\n";
 		break;
 	case Command::MARK_IN_PROGRESS:
 	{
@@ -119,6 +122,7 @@ int main(int argc, char* argv[])
 		id = std::stoi(argv[2]);
 		std::cout << "Marking Task " + std::to_string(id) + "in progress ..............\n";
 		ret = update_or_mark_or_delete(id, "", "in-progress");
+		std::cout << " Task marked in-progress ..............\n";
 		break;
 	}
 	case Command::MARK_DONE:
@@ -130,6 +134,7 @@ int main(int argc, char* argv[])
 		id = std::stoi(argv[2]);
 		std::cout << "Marking Task " + std::to_string(id) + "done ..............\n";
 		ret = update_or_mark_or_delete(id, "", "done");
+		std::cout << " Task marked done ..............\n";
 		break;
 	}
 	case Command::LIST:
