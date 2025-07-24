@@ -15,6 +15,7 @@ enum class Command {
 	LIST_DONE,
 	LIST_TODO,
 	LIST_IN_PROGRESS,
+	HELP,
 	UNKNOWN
 };
 
@@ -27,7 +28,8 @@ std::unordered_map<std::string, Command> command_map = {
 	{"list", Command::LIST},
 	{"list done", Command::LIST_DONE},
 	{"list todo", Command::LIST_TODO},
-	{"list in-progress", Command::LIST_IN_PROGRESS}
+	{"list in-progress", Command::LIST_IN_PROGRESS},
+	{"help", Command::HELP}
 
 };
 
@@ -42,13 +44,13 @@ struct Task {
 const std::string filename = "tasks.json";
 
 int add(std::string desc);
-void list();
-int update_or_mark(int id, std::string desc, std::string newStatus);
+void list(std::string status);
+int update_or_mark_or_delete(int id, std::string desc, std::string newStatus);
 
 int max_Id();
 std::string editLine(int id, std::string line, std::string desc, std::string stat);
 
-int main(int argc, char* argv[]) 
+int main(int argc, char* argv[])
 {
 	std::string cmd_input = "";
 
@@ -67,6 +69,8 @@ int main(int argc, char* argv[])
 	}
 
 	Command cmd = Command::UNKNOWN;
+	int id;
+	int ret;
 	auto it = command_map.find(cmd_input);
 	if (it != command_map.end()) {
 		cmd = it->second;
@@ -81,7 +85,8 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 		std::string description = argv[2];
-		int ret = add(description);
+		std::cout << " Adding Task..............\n";
+		ret = add(description);
 		break;
 	}
 	case Command::UPDATE:
@@ -90,12 +95,20 @@ int main(int argc, char* argv[])
 			std::cerr << "Erreur : id ou description manquante pour 'update'\n";
 			return 1;
 		}
-		int id = std::stoi(argv[2]);
+		id = std::stoi(argv[2]);
 		std::string description = argv[3];
-		int ret = update_or_mark(id, description,"");
+		std::cout << "Updating Task " + std::to_string(id) + "..............\n";
+		ret = update_or_mark_or_delete(id, description, "");
 		break;
 	}
 	case Command::DELETE:
+		if (argc < 3) {
+			std::cerr << "Erreur : id manquant pour 'delete'\n";
+			return 1;
+		}
+		id = std::stoi(argv[2]);
+		std::cout << "Deleting Task " + std::to_string(id) + "..............\n";
+		ret = update_or_mark_or_delete(id,"","");
 		break;
 	case Command::MARK_IN_PROGRESS:
 	{
@@ -103,8 +116,9 @@ int main(int argc, char* argv[])
 			std::cerr << "Erreur : id manquante pour 'mark-in-progress'\n";
 			return 1;
 		}
-		int id = std::stoi(argv[2]);
-		int ret = update_or_mark(id,"","in-progress");
+		id = std::stoi(argv[2]);
+		std::cout << "Marking Task " + std::to_string(id) + "in progress ..............\n";
+		ret = update_or_mark_or_delete(id, "", "in-progress");
 		break;
 	}
 	case Command::MARK_DONE:
@@ -113,21 +127,45 @@ int main(int argc, char* argv[])
 			std::cerr << "Erreur : id manquante pour 'mark-done'\n";
 			return 1;
 		}
-		int id = std::stoi(argv[2]);
-		int ret = update_or_mark(id,"","done");
+		id = std::stoi(argv[2]);
+		std::cout << "Marking Task " + std::to_string(id) + "done ..............\n";
+		ret = update_or_mark_or_delete(id, "", "done");
 		break;
 	}
 	case Command::LIST:
-		list();
+		std::cout << "List of all tasks ..............\n";
+		list("");
 		break;
 	case Command::LIST_DONE:
+		std::cout << "List of tasks done ..............\n";
+		list("done");
 		break;
 	case Command::LIST_TODO:
+		std::cout << "List of tasks todo ..............\n";
+		list("todo");
 		break;
 	case Command::LIST_IN_PROGRESS:
+		std::cout << "List of tasks in progress ..............\n";
+		list("in-progress");
 		break;
 	case Command::UNKNOWN:
+		std::cout << "Command unknown. Type help to see all commands .............\n";
 		break;
+	case Command::HELP:
+	{
+		std::cout << "Task Tracker - Available Commands:\n";
+		std::cout << "  add \"description\"           : Add a new task\n";
+		std::cout << "  update <id> \"description\"   : Update the description of a task\n";
+		std::cout << "  delete <id>                 : Delete a task by ID\n";
+		std::cout << "  mark-in-progress <id>       : Mark a task as in progress\n";
+		std::cout << "  mark-done <id>              : Mark a task as done\n";
+		std::cout << "  list                        : List all tasks\n";
+		std::cout << "  list done                   : List completed tasks\n";
+		std::cout << "  list todo                   : List tasks that are not yet done\n";
+		std::cout << "  list in-progress            : List tasks in progress\n";
+		std::cout << "  help                        : Show this help message\n";
+		break;
+	}
 	default:
 		break;
 	}
@@ -170,7 +208,7 @@ int add(std::string desc)
 
 	std::ofstream outfile(filename, std::ios::app); // en mode append pour ne pas effacer tout le contenu du fichier
 	//outfile << T.id << "|" << T.description << "|" << T.createdAt << "|" << T.updatedAt << "\n";
-	outfile << std::to_string(max_Id() + 1 )<< "|" << desc << "|" <<"todo|" << now << "|" << now << "\n";
+	outfile << std::to_string(max_Id() + 1) << "|" << desc << "|" << "todo|" << now << "|" << now << "\n";
 	outfile.close();
 
 	return 0;
@@ -195,31 +233,44 @@ int max_Id()
 			}
 			catch (const std::exception&)
 			{
-					
+
 			}
 		}
 	}
 	return maxId;
 }
 
-void list() {
+void list(std::string stat) {
 	std::ifstream infile(filename);
 	std::string line;
 	while (std::getline(infile, line))
 	{
+		std::string texte = "";
 		size_t first_sep = line.find("|");
 		//int id = std::stoi(line.substr(0, first_sep));
 		size_t second_sep = line.find("|", first_sep + 1);
 		//std::string description = line.substr(first_sep + 1, second_sep - first_sep - 1);
-		std::string texte = line.substr(0, second_sep);
+		size_t third_sep = line.find("|", second_sep + 1);
+		std::string status = line.substr(second_sep + 1, third_sep - second_sep - 1);
+		//std::cout << status << "\n";
 
-		std::cout << texte << "\n";
+		if (stat == "") // list all
+		{
+			texte = line.substr(0, second_sep);
+			std::cout << texte << "\n";
+		}
+		else if (status == stat)
+		{
+			texte = line.substr(0, second_sep);
+			std::cout << texte << "\n";
+		}
+
 		//std::cout << id << "---" << description << "\n";
 	}
 	infile.close();
 }
 
-int update_or_mark(int id, std::string desc, std::string newStatus) {
+int update_or_mark_or_delete(int id, std::string desc, std::string newStatus) {
 
 	std::ifstream infile(filename);
 	std::vector<std::string> updatedLines;
@@ -230,11 +281,21 @@ int update_or_mark(int id, std::string desc, std::string newStatus) {
 	{
 		size_t first_sep = line.find("|");
 		int id_task = std::stoi(line.substr(0, first_sep));
-		if (id_task == id) {
+		if (id_task == id)
+		{
 			found = true;
-			std::string newLine = editLine(id, line, desc, newStatus);
-			updatedLines.push_back(newLine);
+			if (desc.empty() && newStatus.empty()) // delete
+			{
+				continue;
+			}
+			else { // update or mark
+
+				std::string newLine = editLine(id, line, desc, newStatus);
+				updatedLines.push_back(newLine);
+			}
 		}
+
+
 		else {
 			updatedLines.push_back(line);
 		}
@@ -255,7 +316,7 @@ int update_or_mark(int id, std::string desc, std::string newStatus) {
 	return 0;
 }
 
-std::string editLine(int id, std::string line, std::string desc, std::string stat) 
+std::string editLine(int id, std::string line, std::string desc, std::string stat)
 {
 	std::string newLine = "";
 	size_t first_sep = line.find("|");
