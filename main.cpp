@@ -42,9 +42,11 @@ struct Task {
 const std::string filename = "tasks.json";
 
 int add(std::string desc);
-int max_Id();
 void list();
-int update(int id, std::string desc);
+int update_or_mark(int id, std::string desc, std::string newStatus);
+
+int max_Id();
+std::string editLine(int id, std::string line, std::string desc, std::string stat);
 
 int main(int argc, char* argv[]) 
 {
@@ -90,15 +92,31 @@ int main(int argc, char* argv[])
 		}
 		int id = std::stoi(argv[2]);
 		std::string description = argv[3];
-		int ret = update(id, description);
+		int ret = update_or_mark(id, description,"");
 		break;
 	}
 	case Command::DELETE:
 		break;
 	case Command::MARK_IN_PROGRESS:
+	{
+		if (argc < 3) {
+			std::cerr << "Erreur : id manquante pour 'mark-in-progress'\n";
+			return 1;
+		}
+		int id = std::stoi(argv[2]);
+		int ret = update_or_mark(id,"","in-progress");
 		break;
+	}
 	case Command::MARK_DONE:
+	{
+		if (argc < 3) {
+			std::cerr << "Erreur : id manquante pour 'mark-done'\n";
+			return 1;
+		}
+		int id = std::stoi(argv[2]);
+		int ret = update_or_mark(id,"","done");
 		break;
+	}
 	case Command::LIST:
 		list();
 		break;
@@ -139,8 +157,6 @@ int add(std::string desc)
 
 	std::string content((std::istreambuf_iterator<char>(infile)), std::istreambuf_iterator<char>());
 	infile.close();
-
-	std::cout << "Contenu actuel de tasks.json :\n" << content << "\n";
 
 	// Ecriture de la tache
 	//Task T ;
@@ -195,36 +211,28 @@ void list() {
 		//int id = std::stoi(line.substr(0, first_sep));
 		size_t second_sep = line.find("|", first_sep + 1);
 		//std::string description = line.substr(first_sep + 1, second_sep - first_sep - 1);
-		std::string desc = line.substr(0, second_sep);
+		std::string texte = line.substr(0, second_sep);
 
-		std::cout << desc << "\n";
+		std::cout << texte << "\n";
 		//std::cout << id << "---" << description << "\n";
 	}
 	infile.close();
 }
 
-int update(int id, std::string desc) {
+int update_or_mark(int id, std::string desc, std::string newStatus) {
 
 	std::ifstream infile(filename);
 	std::vector<std::string> updatedLines;
 	std::string line;
+	bool found = false;
 
 	while (std::getline(infile, line))
 	{
 		size_t first_sep = line.find("|");
 		int id_task = std::stoi(line.substr(0, first_sep));
 		if (id_task == id) {
-			size_t second_sep = line.find("|", first_sep + 1);
-			//std::string description = line.substr(first_sep + 1, second_sep - first_sep - 1);
-			size_t third_sep = line.find("|", second_sep + 1);
-			std::string status = line.substr(second_sep + 1, third_sep - second_sep - 1);
-			size_t fourth_sep = line.find("|", third_sep + 1);
-			std::string createdAt = line.substr(third_sep + 1, fourth_sep - third_sep - 1);
-			std::time_t current_time = std::time(nullptr);
-			std::string now = std::ctime(&current_time);
-			now.pop_back();
-
-			std::string newLine = std::to_string(id) + "|" + desc + "|" + status + "|" + createdAt + "|" + now;
+			found = true;
+			std::string newLine = editLine(id, line, desc, newStatus);
 			updatedLines.push_back(newLine);
 		}
 		else {
@@ -234,15 +242,41 @@ int update(int id, std::string desc) {
 	infile.close();
 
 	std::ofstream outfile(filename);
-	if (!outfile) {
-		std::cerr << "Erreur : impossible d'écrire dans le fichier " << filename << "\n";
-		return 1;
-	}
 
 	for (const auto& l : updatedLines) {
 		outfile << l << "\n";
 	}
 
 	outfile.close();
+	if (!found) {
+		std::cout << "Aucune tâche avec l'ID " << id << " trouvée.\n";
+		return 1;
+	}
 	return 0;
 }
+
+std::string editLine(int id, std::string line, std::string desc, std::string stat) 
+{
+	std::string newLine = "";
+	size_t first_sep = line.find("|");
+	size_t second_sep = line.find("|", first_sep + 1);
+	std::string description = line.substr(first_sep + 1, second_sep - first_sep - 1);
+	size_t third_sep = line.find("|", second_sep + 1);
+	std::string status = line.substr(second_sep + 1, third_sep - second_sep - 1);
+	size_t fourth_sep = line.find("|", third_sep + 1);
+	std::string createdAt = line.substr(third_sep + 1, fourth_sep - third_sep - 1);
+	std::time_t current_time = std::time(nullptr);
+	std::string now = std::ctime(&current_time);
+	now.pop_back();
+
+	if (stat == "") //update
+	{
+		newLine = std::to_string(id) + "|" + desc + "|" + status + "|" + createdAt + "|" + now;
+	}
+	else // mark-done or mark-progress
+	{
+		newLine = std::to_string(id) + "|" + description + "|" + stat + "|" + createdAt + "|" + now;
+	}
+	return newLine;
+}
+
